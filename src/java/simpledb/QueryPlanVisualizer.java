@@ -7,15 +7,15 @@ import simpledb.TupleDesc.TDItem;
 
 public class QueryPlanVisualizer {
 
-    static final String JOIN = "⨝";
-    static final String HASH_JOIN = "⨝(hash)";
-    static final String SELECT = "σ";
-    static final String PROJECT = "π";
-    static final String RENAME = "ρ";
-    static final String SCAN = "scan";
-    static final String ORDERBY = "o";
-    static final String GROUPBY = "g";
-    static final String SPACE = "  ";
+    private static final String JOIN = "⨝";
+    private static final String HASH_JOIN = "⨝(hash)";
+    private static final String SELECT = "σ";
+    private static final String PROJECT = "π";
+    private static final String RENAME = "ρ";
+    private static final String SCAN = "scan";
+    private static final String ORDERBY = "o";
+    private static final String GROUPBY = "g";
+    private static final String SPACE = "  ";
 
     private int calculateQueryPlanTreeDepth(OpIterator root) {
         if (root == null)
