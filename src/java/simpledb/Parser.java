@@ -112,7 +112,7 @@ public class Parser {
                     lp.addJoin(tab1field, tab2field, op);
                 }
 
-            } else { // select node
+            } else { // select nodeu
                 String column;
                 String compValue;
                 ZConstant op1 = (ZConstant) ops.elementAt(0);

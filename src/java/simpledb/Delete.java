@@ -1,5 +1,6 @@
 package simpledb;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 
 /**
@@ -9,6 +10,12 @@ import java.io.IOException;
 public class Delete extends Operator {
 
     private static final long serialVersionUID = 1L;
+
+    private final TransactionId t;
+    private OpIterator child;
+
+    private int count;
+    private boolean called;
 
     /**
      * Constructor specifying the transaction that this delete belongs to as
@@ -21,23 +28,37 @@ public class Delete extends Operator {
      */
     public Delete(TransactionId t, OpIterator child) {
         // some code goes here
+        this.t = t;
+        this.child = child;
+        this.count = -1;
+        this.called = false;
     }
 
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return child.getTupleDesc();
     }
 
     public void open() throws DbException, TransactionAbortedException {
         // some code goes here
+        child.open();
+        count = 0;
+        super.open();
     }
 
     public void close() {
         // some code goes here
+        super.close();
+        count = -1;
+        called = false;
+        child.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        child.rewind();
+        count = 0;
+        called = false;
     }
 
     /**
@@ -51,18 +72,32 @@ public class Delete extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
-        return null;
+        if(called)  return null;
+        called = true;
+        Tuple t = new Tuple(new TupleDesc(new Type[] {Type.INT_TYPE}));
+        while(child.hasNext()) {
+            Tuple tuple = child.next();
+            try {
+                Database.getBufferPool().deleteTuple(this.t, tuple);
+                this.count++;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        t.setField(0, new IntField(this.count));
+        return t;
     }
 
     @Override
     public OpIterator[] getChildren() {
         // some code goes here
-        return null;
+        return new OpIterator[] {this.child};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        child = children[0];
     }
 
 }

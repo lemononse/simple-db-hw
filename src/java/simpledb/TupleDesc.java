@@ -135,10 +135,11 @@ public class TupleDesc implements Serializable {
      */
     public int fieldNameToIndex(String name) throws NoSuchElementException {
         // some code goes here
-        for(int i = 0; i < tdItems.length; i++)
+        for(int i = 0; i < tdItems.length; i++) {
             if(tdItems[i].fieldName.equals(name))
-                    return i;
-        throw new NoSuchElementException("no field with a matching name is found.");
+                return i;
+        }
+        throw new NoSuchElementException("not find fieldName " + name);
     }
 
     /**

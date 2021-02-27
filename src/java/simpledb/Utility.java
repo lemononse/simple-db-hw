@@ -154,4 +154,94 @@ public class Utility {
         return out;
     }
 }
+class DoubleLinkedList<E> {
+    private Node<E> first;
+    private Node<E> last;
+
+    public int getSize() {
+        return size;
+    }
+
+    private int size = 0;
+
+    DoubleLinkedList() {
+        first = new Node<>(first, null, null);
+        last = new Node<>(first, null, null);
+        first.next = last;
+        first.prev = last;
+        last.next = first;
+        last.prev = first;
+        this.size = 0;
+    }
+
+    public void addLast(E e) {
+        Node<E> newNode = new Node<>(last.prev, e, last);
+        last.prev.next = newNode;
+        last.prev = newNode;
+        this.size++;
+    }
+
+    public E removeFirst() {
+        if(first.next != last) {
+            Node<E> tmp = first.next;
+            tmp.next.prev = first;
+            first.next = tmp.next;
+            tmp.next = tmp.prev = null;
+            this.size--;
+            return tmp.item;
+        }
+        return null;
+    }
+
+    public E findAndMove(E e) {
+        Node<E> cur = first.next;
+        while(cur != last) {
+            if(cur.item == e) {
+                //从头部移除
+                cur.prev.next = cur.next;
+                cur.next.prev = cur.prev;
+                //从尾部加入
+                cur.prev = last.prev;
+                last.prev.next = cur;
+                cur.next = last;
+                last.prev = cur;
+                return cur.item;
+            }
+            cur = cur.next;
+        }
+            return null;
+    }
+
+    private void show() {
+        Node<E> p = first.next;
+        for(int i = 0; i < size; i++) {
+            System.out.println(p.item);
+            p = p.next;
+        }
+    }
+
+    private static class Node<E> {
+        E item;
+        Node<E> next;
+        Node<E> prev;
+        Node(Node<E> prev, E item, Node<E> next) {
+            this.item = item;
+            this.prev = prev;
+            this.next = next;
+        }
+    }
+
+    public static void main(String[] args) {
+        DoubleLinkedList<String> list = new DoubleLinkedList<>();
+        list.addLast("first");
+        list.addLast("second");
+        list.addLast("third");
+        list.addLast("last");
+        list.show();
+        list.removeFirst();
+        list.show();
+        list.findAndMove("third");
+        list.show();
+    }
+}
 

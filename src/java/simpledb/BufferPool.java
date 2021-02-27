@@ -1,7 +1,9 @@
 package simpledb;
 
+import javax.xml.crypto.Data;
 import java.io.*;
 
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -27,7 +29,8 @@ public class BufferPool {
     public static final int DEFAULT_PAGES = 50;
 
     private final int numPages;
-    private final ConcurrentHashMap<Integer, Page> pageStore;
+    private  ConcurrentHashMap<PageId, Page> pageStore;
+    private DoubleLinkedList<PageId> pageDoubleLinkedList;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -38,6 +41,7 @@ public class BufferPool {
         // some code goes here
         this.numPages = numPages;
         this.pageStore = new ConcurrentHashMap<>();
+        this.pageDoubleLinkedList = new DoubleLinkedList<>();
     }
     
     public static int getPageSize() {
@@ -72,12 +76,16 @@ public class BufferPool {
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
-        if(!pageStore.containsKey(pid.hashCode())) {
+        if(!pageStore.containsKey(pid)) {
             DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
             Page page = dbFile.readPage(pid);
-            pageStore.put(pid.hashCode(), page);
+            if(numPages <= pageDoubleLinkedList.getSize())
+                evictPage();
+            pageStore.put(pid, page);
+            pageDoubleLinkedList.addLast(pid);
         }
-        return pageStore.get(pid.hashCode());
+        pageDoubleLinkedList.findAndMove(pid);
+        return pageStore.get(pid);
     }
 
     /**
@@ -143,6 +151,18 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile file = Database.getCatalog().getDatabaseFile(tableId);
+        updateBufferPool(file.insertTuple(tid, t), tid);
+    }
+
+    private void updateBufferPool(ArrayList<Page> pageList, TransactionId tid) throws DbException {
+        for(Page p : pageList) {
+            p.markDirty(true, tid);
+            //如果是删除操作，相当于刷新一遍
+            pageStore.put(p.getId(), p);
+            if(pageStore.size() > numPages)
+                evictPage();
+        }
     }
 
     /**
@@ -162,6 +182,8 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile file = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+        updateBufferPool(file.deleteTuple(tid, t), tid);
     }
 
     /**
@@ -172,6 +194,8 @@ public class BufferPool {
     public synchronized void flushAllPages() throws IOException {
         // some code goes here
         // not necessary for lab1
+        for(Page p : pageStore.values())
+            flushPage(p.getId());
 
     }
 
@@ -186,6 +210,7 @@ public class BufferPool {
     public synchronized void discardPage(PageId pid) {
         // some code goes here
         // not necessary for lab1
+        pageStore.remove(pid);
     }
 
     /**
@@ -195,6 +220,14 @@ public class BufferPool {
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
+        Page page = pageStore.get(pid);
+        TransactionId tid = null;
+        if((tid = page.isDirty()) != null) {
+            Database.getLogFile().logWrite(tid, page.getBeforeImage(), page);
+            Database.getLogFile().force();
+            Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(page);
+            page.markDirty(false, null);
+        }
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -211,6 +244,13 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
+        PageId pd = this.pageDoubleLinkedList.removeFirst();
+        try {
+            flushPage(pd);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        discardPage(pd);
     }
 
 }
